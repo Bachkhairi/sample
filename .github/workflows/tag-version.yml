@@ -9,6 +9,9 @@ jobs:
   create-tag:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write  # Ensure the action has permission to push tags
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -21,11 +24,18 @@ jobs:
       - name: Get latest version
         id: version
         run: |
-          TAG=$(git describe --tags --abbrev=0)  # Get the latest tag
+          # Check if there are any tags at all
+          TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")  # Default to v0.0.0 if no tags exist
           TAG_NUM=$(echo $TAG | sed 's/v//')  # Strip 'v' if present
-          NEW_TAG_NUM=$((TAG_NUM + 1))  # Increment version number (adjust for your needs)
-          echo "New version: v$NEW_TAG_NUM"
-          echo "NEW_TAG=v$NEW_TAG_NUM" >> $GITHUB_ENV
+          IFS='.' read -r -a VERSION_PARTS <<< "$TAG_NUM"  # Split version into major, minor, patch
+
+          # Increment the patch version (you can adjust this to major or minor if needed)
+          PATCH=${VERSION_PARTS[2]}
+          NEW_PATCH=$((PATCH + 1))
+
+          NEW_TAG="v${VERSION_PARTS[0]}.${VERSION_PARTS[1]}.$NEW_PATCH"  # Generate new tag (e.g., v1.0.1)
+          echo "New version: $NEW_TAG"
+          echo "NEW_TAG=$NEW_TAG" >> $GITHUB_ENV
 
       - name: Create new tag
         run: |
