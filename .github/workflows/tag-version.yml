@@ -20,9 +20,8 @@ jobs:
       
       - name: Get the latest tag and increment version
         id: version
-        run: |
-          
-
+        run: |   
+          git fetch --tags
           # Get the latest tag
           TAG=$(git describe --tags --abbrev=0)
   
