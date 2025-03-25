@@ -3,37 +3,50 @@ name: Auto Versioning and Tagging
 on:
   push:
     branches:
-      - main
+      - main  # Trigger this workflow on push to the main branch
+
 jobs:
   versioning:
     runs-on: ubuntu-latest
-    permissions:  # 👈 Add this to grant write access
-      contents: write
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v2
 
       - name: Set up Git
         run: |
-          git config user.name "Bachhamba Khaireddine"
-          git config user.email "khaireddine.bachhamba@ept.ucar.tn"
-
-      - name: Get the latest tag (if any)
+          git config user.name "Your Name"
+          git config user.email "your.email@example.com"
+      
+      - name: Get the latest tag and increment version
         id: version
         run: |
-          TAG=$(git describe --tags --abbrev=0 || echo "v0.1.0")
+          # Output the latest tag
           echo "Latest Tag: $TAG"
+
+          # Remove 'v' from the version number (e.g., v1.0.1 -> 1.0.1)
           TAG_NUM=$(echo $TAG | sed 's/v//')
+
+          # Split the version into MAJOR, MINOR, and PATCH
           IFS='.' read -r MAJOR MINOR PATCH <<< "$TAG_NUM"
+
+          # Increment the PATCH version by 1
           NEW_PATCH=$((PATCH + 1))
+
+          # Construct the new version tag
           NEW_TAG="v$MAJOR.$MINOR.$NEW_PATCH"
+
+          # Output the new version
           echo "New version: $NEW_TAG"
+
+          # Set the new tag as an environment variable for later steps
           echo "NEW_TAG=$NEW_TAG" >> $GITHUB_ENV
 
-      - name: Create new tag and push
+      - name: Create and push new tag
         run: |
+          # Create the new tag
           git tag $NEW_TAG
+          # Push the new tag to the remote repository
           git push origin $NEW_TAG
         env:
           NEW_TAG: ${{ env.NEW_TAG }}
