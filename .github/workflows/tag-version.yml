@@ -1,4 +1,4 @@
-name: Strict Versioning with Patch Control
+name: Strict Versioning with Release Notes
 
 on:
   push:
@@ -90,22 +90,41 @@ jobs:
         run: |
           # Generate release notes from commits
           COMMITS_SINCE_TAG=$(git log $LATEST_TAG..HEAD --pretty=format:"%h %s")
-          RELEASE_NOTES="## $NEW_TAG Release Notes\n\n### Changes:\n$COMMITS_SINCE_TAG"
           
-          # Create the release notes markdown file
-          echo "$RELEASE_NOTES" > release_notes.md
+          # Initialize sections
+          FEATURES=""
+          FIXES=""
+          CHORES=""
+          
+          # Categorize commits
+          while read -r line; do
+            HASH=$(echo $line | awk '{print $1}')
+            MESSAGE=$(echo $line | cut -d ' ' -f2-)
 
-          # Optional: Upload release notes as an artifact
-          # Uncomment below if you want to store them as an artifact for later reference
-          # - name: Upload release notes artifact
-          #   uses: actions/upload-artifact@v2
-          #   with:
-          #     name: release-notes
-          #     path: release_notes.md
+            if [[ $MESSAGE == feat* ]]; then
+              FEATURES+="- **${MESSAGE}** ([${HASH}](https://github.com/${{ github.repository }}/commit/${HASH}))\n"
+            elif [[ $MESSAGE == fix* ]]; then
+              FIXES+="- **${MESSAGE}** ([${HASH}](https://github.com/${{ github.repository }}/commit/${HASH}))\n"
+            else
+              CHORES+="- **${MESSAGE}** ([${HASH}](https://github.com/${{ github.repository }}/commit/${HASH}))\n"
+            fi
+          done <<< "$COMMITS_SINCE_TAG"
 
-      - name: Upload Release Notes as GitHub Release (Optional)
+          # Build release notes
+          RELEASE_NOTES="## 🚀 $NEW_TAG Release Notes\n\n"
+          if [ ! -z "$FEATURES" ]; then RELEASE_NOTES+="### 🆕 New Features\n$FEATURES\n"; fi
+          if [ ! -z "$FIXES" ]; then RELEASE_NOTES+="### 🛠 Fixes\n$FIXES\n"; fi
+          if [ ! -z "$CHORES" ]; then RELEASE_NOTES+="### 🔧 Maintenance & Documentation\n$CHORES\n"; fi
+
+          # Save to markdown file
+          echo -e "$RELEASE_NOTES" > release_notes.md
+
+      - name: Create GitHub Release
         if: env.SKIP_VERSIONING != 'true'
-        run: |
-          gh release create $NEW_TAG release_notes.md --title "Release $NEW_TAG" --notes-file release_notes.md
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.NEW_TAG }}
+          name: "Release ${{ env.NEW_TAG }}"
+          body_path: release_notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
