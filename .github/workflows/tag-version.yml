@@ -84,3 +84,28 @@ jobs:
           git push origin $NEW_TAG
         env:
           NEW_TAG: ${{ env.NEW_TAG }}
+
+      - name: Generate Release Notes
+        if: env.SKIP_VERSIONING != 'true'
+        run: |
+          # Generate release notes from commits
+          COMMITS_SINCE_TAG=$(git log $LATEST_TAG..HEAD --pretty=format:"%h %s")
+          RELEASE_NOTES="## $NEW_TAG Release Notes\n\n### Changes:\n$COMMITS_SINCE_TAG"
+          
+          # Create the release notes markdown file
+          echo "$RELEASE_NOTES" > release_notes.md
+
+          # Optional: Upload release notes as an artifact
+          # Uncomment below if you want to store them as an artifact for later reference
+          # - name: Upload release notes artifact
+          #   uses: actions/upload-artifact@v2
+          #   with:
+          #     name: release-notes
+          #     path: release_notes.md
+
+      - name: Upload Release Notes as GitHub Release (Optional)
+        if: env.SKIP_VERSIONING != 'true'
+        run: |
+          gh release create $NEW_TAG release_notes.md --title "Release $NEW_TAG" --notes-file release_notes.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
