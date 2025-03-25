@@ -15,12 +15,17 @@ jobs:
 
       - name: Set up Git
         run: |
-          git config user.name "Your Name"
-          git config user.email "your.email@example.com"
+          git config user.name "Bachhamba Khaireddine"
+          git config user.email "khaireddine.bachhamba@ept.ucar.tn"
       
       - name: Get the latest tag and increment version
         id: version
         run: |
+          
+
+          # Get the latest tag
+          TAG=$(git describe --tags --abbrev=0)
+  
           # Output the latest tag
           echo "Latest Tag: $TAG"
 
@@ -43,6 +48,7 @@ jobs:
           echo "NEW_TAG=$NEW_TAG" >> $GITHUB_ENV
 
       - name: Create and push new tag
+
         run: |
           # Create the new tag
           git tag $NEW_TAG
