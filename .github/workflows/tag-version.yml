@@ -1,16 +1,13 @@
-name: Auto Tagging on Commit
+name: Auto Versioning and Tagging
 
 on:
   push:
     branches:
-      - main  # Trigger this workflow on commits to the `main` branch
+      - main  # Trigger this workflow on push to the main branch
 
 jobs:
-  create-tag:
+  versioning:
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: write  # Ensure the action has permission to push tags
 
     steps:
       - name: Checkout code
@@ -20,24 +17,20 @@ jobs:
         run: |
           git config user.name "Bachhamba Khaireddine"
           git config user.email "khaireddine.bachhamba@ept.ucar.tn"
-
-      - name: Get latest version
+      
+      - name: Get the latest tag (if any)
         id: version
         run: |
-          # Check if there are any tags at all
-          TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")  # Default to v0.0.0 if no tags exist
-          TAG_NUM=$(echo $TAG | sed 's/v//')  # Strip 'v' if present
-          IFS='.' read -r -a VERSION_PARTS <<< "$TAG_NUM"  # Split version into major, minor, patch
-
-          # Increment the patch version (you can adjust this to major or minor if needed)
-          PATCH=${VERSION_PARTS[2]}
-          NEW_PATCH=$((PATCH + 1))
-
-          NEW_TAG="v${VERSION_PARTS[0]}.${VERSION_PARTS[1]}.$NEW_PATCH"  # Generate new tag (e.g., v1.0.1)
+          TAG=$(git describe --tags --abbrev=0 || echo "v0.1.0")  # Default to v0.1.0 if no tags exist
+          echo "Latest Tag: $TAG"
+          TAG_NUM=$(echo $TAG | sed 's/v//')  # Remove 'v' from tag
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$TAG_NUM"  # Split version into MAJOR, MINOR, PATCH
+          NEW_PATCH=$((PATCH + 1))  # Increment the PATCH version
+          NEW_TAG="v$MAJOR.$MINOR.$NEW_PATCH"  # Construct new tag
           echo "New version: $NEW_TAG"
-          echo "NEW_TAG=$NEW_TAG" >> $GITHUB_ENV
+          echo "NEW_TAG=$NEW_TAG" >> $GITHUB_ENV  # Set environment variable for next steps
 
-      - name: Create new tag
+      - name: Create new tag and push
         run: |
           git tag $NEW_TAG
           git push origin $NEW_TAG
