@@ -1,0 +1,35 @@
+name: Auto Tagging on Commit
+
+on:
+  push:
+    branches:
+      - main  # Trigger this workflow on commits to the `main` branch
+
+jobs:
+  create-tag:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Git
+        run: |
+          git config user.name "Your Name"
+          git config user.email "your-email@example.com"
+
+      - name: Get latest version
+        id: version
+        run: |
+          TAG=$(git describe --tags --abbrev=0)  # Get the latest tag
+          TAG_NUM=$(echo $TAG | sed 's/v//')  # Strip 'v' if present
+          NEW_TAG_NUM=$((TAG_NUM + 1))  # Increment version number (adjust for your needs)
+          echo "New version: v$NEW_TAG_NUM"
+          echo "NEW_TAG=v$NEW_TAG_NUM" >> $GITHUB_ENV
+
+      - name: Create new tag
+        run: |
+          git tag $NEW_TAG
+          git push origin $NEW_TAG
+        env:
+          NEW_TAG: ${{ env.NEW_TAG }}
