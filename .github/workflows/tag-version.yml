@@ -8,7 +8,10 @@ on:
 jobs:
   versioning:
     runs-on: ubuntu-latest
-
+    permissions:
+      contents: write  # For pushing code
+      tags: write      # Specifically needed for pushing tags
+  
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
