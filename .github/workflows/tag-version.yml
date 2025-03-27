@@ -106,11 +106,11 @@ jobs:
           done <<< "$COMMITS_SINCE_TAG"
 
           # Build release notes
-          RELEASE_NOTES="## 🚀 $NEW_TAG Release Notes\n"
+          RELEASE_NOTES="## $NEW_TAG Release Notes\n"
 
-          if [[ -n "$FEATURES" ]]; then RELEASE_NOTES+="### 🆕 New Features\n$FEATURES\n"; fi
-          if [[ -n "$FIXES" ]]; then RELEASE_NOTES+="### 🛠 Fixes\n$FIXES\n"; fi
-          if [[ -n "$CHORES" ]]; then RELEASE_NOTES+="### 🔧 Maintenance & Documentation\n$CHORES\n"; fi
+          if [[ -n "$FEATURES" ]]; then RELEASE_NOTES+="### New Features\n$FEATURES\n"; fi
+          if [[ -n "$FIXES" ]]; then RELEASE_NOTES+="### Fixes\n$FIXES\n"; fi
+          if [[ -n "$CHORES" ]]; then RELEASE_NOTES+="### Maintenance & Documentation\n$CHORES\n"; fi
 
           if [[ -z "$FEATURES" && -z "$FIXES" && -z "$CHORES" ]]; then
             RELEASE_NOTES+="No significant changes.\n"
