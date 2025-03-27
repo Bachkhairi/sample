@@ -27,44 +27,38 @@ jobs:
           # Get latest tag
           git fetch --tags
           LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.1.0")
-          echo "Current version: $LATEST_TAG"
+          echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
 
-          # Get commits since last tag
+          # Get commit messages since last tag
           if [ "$LATEST_TAG" != "v0.1.0" ]; then
             COMMITS=$(git log $LATEST_TAG..HEAD --pretty=format:"%s")
           else
             COMMITS=$(git log --pretty=format:"%s")
           fi
 
-          # Initialize bump type
-          BUMP_TYPE="PATCH"  # Default to PATCH only if conditions met
+          # Initialize bump type (default PATCH)
+          BUMP_TYPE="PATCH"
 
-          # MAJOR bump conditions (breaking changes)
+          # Determine bump type based on commit messages
           if echo "$COMMITS" | grep -qE '^(break|major|feat)(\(.*\))?!:'; then
             BUMP_TYPE="MAJOR"
-
-          # MINOR bump conditions (features)
           elif echo "$COMMITS" | grep -qE '^(feat|feature)(\(.*\))?:'; then
             BUMP_TYPE="MINOR"
-
-          # STRICT PATCH conditions (only bump if these match)
           elif echo "$COMMITS" | grep -qE '^(fix|patch|docs|chore)(\(.*\))?:'; then
             BUMP_TYPE="PATCH"
           else
-            # No matching commit patterns - DON'T bump version
             echo "No version-bumping commits detected"
             echo "SKIP_VERSIONING=true" >> $GITHUB_ENV
             exit 0
           fi
 
-          echo "Detected change type: $BUMP_TYPE"
           echo "BUMP_TYPE=$BUMP_TYPE" >> $GITHUB_ENV
 
       - name: Calculate new version
         if: env.SKIP_VERSIONING != 'true'
         id: version-calculator
         run: |
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.1.0")
+          LATEST_TAG=${{ env.LATEST_TAG }}
           TAG_NUM=${LATEST_TAG#v}
           IFS='.' read -r MAJOR MINOR PATCH <<< "$TAG_NUM"
 
@@ -88,35 +82,39 @@ jobs:
       - name: Generate Release Notes
         if: env.SKIP_VERSIONING != 'true'
         run: |
-          # Generate release notes from commits
+          # Get commits since last tag
           COMMITS_SINCE_TAG=$(git log $LATEST_TAG..HEAD --pretty=format:"%h %s")
-          
+
           # Initialize sections
           FEATURES=""
           FIXES=""
           CHORES=""
-          
-          # Categorize commits
-          while read -r line; do
-            HASH=$(echo $line | awk '{print $1}')
-            MESSAGE=$(echo $line | cut -d ' ' -f2-)
 
-            if [[ $MESSAGE == feat* ]]; then
-              FEATURES+="- **${MESSAGE}** ([${HASH}](https://github.com/${{ github.repository }}/commit/${HASH}))\n"
-            elif [[ $MESSAGE == fix* ]]; then
-              FIXES+="- **${MESSAGE}** ([${HASH}](https://github.com/${{ github.repository }}/commit/${HASH}))\n"
+          # Process commit messages
+          while IFS= read -r line; do
+            HASH=$(echo "$line" | awk '{print $1}')
+            MESSAGE=$(echo "$line" | cut -d ' ' -f2-)
+
+            if [[ $MESSAGE == feat:* ]]; then
+              FEATURES+="- **${MESSAGE#feat: }** ([${HASH}](https://github.com/${{ github.repository }}/commit/${HASH}))\n"
+            elif [[ $MESSAGE == fix:* ]]; then
+              FIXES+="- **${MESSAGE#fix: }** ([${HASH}](https://github.com/${{ github.repository }}/commit/${HASH}))\n"
             else
               CHORES+="- **${MESSAGE}** ([${HASH}](https://github.com/${{ github.repository }}/commit/${HASH}))\n"
             fi
           done <<< "$COMMITS_SINCE_TAG"
 
           # Build release notes
-          RELEASE_NOTES="## 🚀 $NEW_TAG Release Notes\n\n"
-          if [ ! -z "$FEATURES" ]; then RELEASE_NOTES+="### 🆕 New Features\n$FEATURES\n"; fi
-          if [ ! -z "$FIXES" ]; then RELEASE_NOTES+="### 🛠 Fixes\n$FIXES\n"; fi
-          if [ ! -z "$CHORES" ]; then RELEASE_NOTES+="### 🔧 Maintenance & Documentation\n$CHORES\n"; fi
+          RELEASE_NOTES="## 🚀 $NEW_TAG Release Notes\n"
 
-          # Save to markdown file
+          if [[ -n "$FEATURES" ]]; then RELEASE_NOTES+="### 🆕 New Features\n$FEATURES\n"; fi
+          if [[ -n "$FIXES" ]]; then RELEASE_NOTES+="### 🛠 Fixes\n$FIXES\n"; fi
+          if [[ -n "$CHORES" ]]; then RELEASE_NOTES+="### 🔧 Maintenance & Documentation\n$CHORES\n"; fi
+
+          if [[ -z "$FEATURES" && -z "$FIXES" && -z "$CHORES" ]]; then
+            RELEASE_NOTES+="No significant changes.\n"
+          fi
+
           echo -e "$RELEASE_NOTES" > release_notes.md
 
       - name: Create GitHub Release
