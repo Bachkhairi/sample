@@ -33,6 +33,7 @@ jobs:
           if [ "$LATEST_TAG" != "v0.1.0" ]; then
             COMMITS=$(git log $LATEST_TAG..HEAD --pretty=format:"%s")
           else
+          
             COMMITS=$(git log --pretty=format:"%s")
           fi
 
