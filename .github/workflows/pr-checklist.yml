@@ -7,22 +7,26 @@ on:
 jobs:
   check-pr-body:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Check PR body for checklist items
+      - name: Validate PR checklist
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          PR_BODY=$(gh pr view ${{ github.event.pull_request.number }} --json body -q ".body")
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          PR_BODY=$(gh pr view "$PR_NUMBER" --json body -q ".body")
 
           echo "PR Body:"
           echo "$PR_BODY"
 
-          if [[ "$PR_BODY" == *"- [x] I have added an entry to RELEASE_NOTES.md"* ]] && \
-             [[ "$PR_BODY" == *"- [x] I have manually tested the changes"* ]]; then
-            echo "✅ PR checklist completed."
+          HAS_RELEASE_NOTES=$(echo "$PR_BODY" | grep -i '\- \[x\] .*RELEASE_NOTES.md')
+          HAS_MANUAL_TEST=$(echo "$PR_BODY" | grep -i '\- \[x\] .*manually tested')
+
+          if [[ -n "$HAS_RELEASE_NOTES" && -n "$HAS_MANUAL_TEST" ]]; then
+            echo "✅ PR checklist is complete."
           else
             echo "❌ PR checklist is incomplete. Please check both boxes."
             exit 1
