@@ -5,11 +5,22 @@ on:
     types: [opened, edited, reopened, synchronize]
 
 jobs:
-  validate-pr-body:
+  check-pr-body:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Check PR checklist items
-        uses: marocchino/verify-pr-title-action@v1
-        with:
-          regexp: '(?=.*- \[x\] I have added an entry to `RELEASE_NOTES\.md`)(?=.*- \[x\] I have manually tested the changes)'
+      - name: Check PR body for checklist items
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_BODY=$(gh pr view ${{ github.event.pull_request.number }} --json body -q ".body")
+
+          echo "PR Body:"
+          echo "$PR_BODY"
+
+          if [[ "$PR_BODY" == *"- [x] I have added an entry to RELEASE_NOTES.md"* ]] && \
+             [[ "$PR_BODY" == *"- [x] I have manually tested the changes"* ]]; then
+            echo "✅ PR checklist completed."
+          else
+            echo "❌ PR checklist is incomplete. Please check both boxes."
+            exit 1
+          fi
