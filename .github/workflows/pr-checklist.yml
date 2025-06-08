@@ -8,6 +8,9 @@ jobs:
   check-pr-body:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
       - name: Check PR body for checklist items
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
