@@ -1,0 +1,15 @@
+name: PR Checklist Validation
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+jobs:
+  validate-pr-body:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check PR checklist items
+        uses: marocchino/verify-pr-title-action@v1
+        with:
+          regexp: '(?=.*- \[x\] I have added an entry to `RELEASE_NOTES\.md`)(?=.*- \[x\] I have manually tested the changes)'
